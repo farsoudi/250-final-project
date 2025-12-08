@@ -1,0 +1,9 @@
+ultralytics
+huggingface_hub
+supervision
+opencv-python
+face_recognition
+cmake
+dlib
+numpy
+requests
