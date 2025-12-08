@@ -125,7 +125,7 @@ install_system_pkg_with_fallback "libgdk-pixbuf2.0-dev" "libgdk-pixbuf-xlib-2.0-
 install_system_pkg "libpango1.0-dev" || exit 1
 install_optional_pkg "libgtk2.0-dev"
 install_optional_pkg "libgtk-3-dev"
-install_system_pkg "libatlas-base-dev" || exit 1
+# Note: libatlas-base-dev no longer needed (dlib removed)
 install_system_pkg "libgstreamer1.0-dev" || exit 1
 install_system_pkg "libgstreamer-plugins-base1.0-dev" || exit 1
 
