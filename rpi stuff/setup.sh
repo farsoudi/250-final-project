@@ -3,7 +3,7 @@
 # Setup script for Raspberry Pi face recognition project
 # This script is idempotent - safe to run multiple times
 
-set -e  # Exit on error, but we'll handle gracefully
+# Don't use set -e since we handle errors gracefully in functions
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -45,6 +45,49 @@ install_system_pkg() {
     fi
 }
 
+# Function to install system package with fallback
+install_system_pkg_with_fallback() {
+    local pkg="$1"
+    local fallback="$2"
+    
+    if package_installed "$pkg"; then
+        echo -e "${GREEN}✓${NC} $pkg is already installed"
+        return 0
+    fi
+    
+    echo -e "${YELLOW}→${NC} Installing $pkg..."
+    if sudo apt install -y "$pkg" 2>/dev/null; then
+        echo -e "${GREEN}✓${NC} $pkg installed successfully"
+        return 0
+    else
+        if [ -n "$fallback" ]; then
+            echo -e "${YELLOW}→${NC} $pkg not available, trying fallback: $fallback..."
+            if sudo apt install -y "$fallback" 2>/dev/null; then
+                echo -e "${GREEN}✓${NC} $fallback installed successfully (replacement for $pkg)"
+                return 0
+            fi
+        fi
+        echo -e "${YELLOW}⚠${NC} $pkg not available (and fallback failed if provided) - continuing anyway"
+        return 0  # Don't fail, some packages are optional
+    fi
+}
+
+# Function to install optional package (won't fail script if missing)
+install_optional_pkg() {
+    if package_installed "$1"; then
+        echo -e "${GREEN}✓${NC} $1 is already installed"
+        return 0
+    else
+        echo -e "${YELLOW}→${NC} Installing $1 (optional)..."
+        if sudo apt install -y "$1" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} $1 installed successfully"
+        else
+            echo -e "${YELLOW}⚠${NC} $1 not available - skipping (optional package)"
+        fi
+        return 0
+    fi
+}
+
 echo "Step 1: Updating package lists..."
 sudo apt update -qq || {
     echo -e "${RED}✗${NC} Failed to update package lists"
@@ -80,10 +123,10 @@ install_system_pkg "libxvidcore-dev" || exit 1
 install_system_pkg "libx264-dev" || exit 1
 install_system_pkg "libfontconfig1-dev" || exit 1
 install_system_pkg "libcairo2-dev" || exit 1
-install_system_pkg "libgdk-pixbuf2.0-dev" || exit 1
+install_system_pkg_with_fallback "libgdk-pixbuf2.0-dev" "libgdk-pixbuf-xlib-2.0-dev"
 install_system_pkg "libpango1.0-dev" || exit 1
-install_system_pkg "libgtk2.0-dev" || exit 1
-install_system_pkg "libgtk-3-dev" || exit 1
+install_optional_pkg "libgtk2.0-dev"
+install_optional_pkg "libgtk-3-dev"
 install_system_pkg "libatlas-base-dev" || exit 1
 install_system_pkg "libgstreamer1.0-dev" || exit 1
 install_system_pkg "libgstreamer-plugins-base1.0-dev" || exit 1
