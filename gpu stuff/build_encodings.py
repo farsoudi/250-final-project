@@ -16,6 +16,30 @@ OUTPUT_PATH = "encodings/face_encodings.npz"
 
 os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
+def resize_image_if_large(image, max_dimension=1200):
+    """
+    Resize image if it's too large to speed up processing.
+    Face recognition works fine on smaller images.
+    """
+    height, width = image.shape[:2]
+    max_size = max(height, width)
+    
+    if max_size > max_dimension:
+        # Calculate new dimensions maintaining aspect ratio
+        if width > height:
+            new_width = max_dimension
+            new_height = int(height * (max_dimension / width))
+        else:
+            new_height = max_dimension
+            new_width = int(width * (max_dimension / height))
+        
+        # Resize using PIL for better quality
+        pil_image = Image.fromarray(image)
+        resized = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        return np.array(resized)
+    
+    return image
+
 def try_detect_face(image, model='hog'):
     """
     Try to detect and encode a face using different methods.
@@ -27,6 +51,10 @@ def try_detect_face(image, model='hog'):
     Returns:
         encoding or None
     """
+    # For CNN, resize large images first to speed things up
+    if model == 'cnn':
+        image = resize_image_if_large(image, max_dimension=1200)
+    
     # First try: standard method
     try:
         encodings = face_recognition.face_encodings(image, model=model)
@@ -85,27 +113,28 @@ def build_encodings():
                 try:
                     img = Image.open(img_path)
                     img_width, img_height = img.size
-                    print(f"[DEBUG] {os.path.basename(img_path)}: {img_width}x{img_height} pixels")
+                    print(f"[INFO] {os.path.basename(img_path)}: {img_width}x{img_height} pixels", end="")
                 except:
                     pass
                 
                 # Try HOG model first (faster)
+                print(" [Trying HOG...]", end="", flush=True)
                 encoding = try_detect_face(image, model='hog')
                 
                 # If HOG fails, try CNN model (more accurate but slower)
                 if encoding is None:
-                    print(f"[DEBUG] HOG failed for {os.path.basename(img_path)}, trying CNN...")
+                    print(" [HOG failed, trying CNN (this may take 10-30 seconds)...]", end="", flush=True)
                     encoding = try_detect_face(image, model='cnn')
                 
                 if encoding is None:
-                    print(f"[WARN] No face found in {img_path} (tried both HOG and CNN), skipping.")
+                    print(f" [FAILED - No face found]")
                     continue
 
                 # Success!
                 all_encodings.append(encoding)
                 all_names.append(person_name)
                 person_encodings_count += 1
-                print(f"[OK] Found face in {os.path.basename(img_path)}")
+                print(f" [SUCCESS]")
                 
             except Exception as e:
                 print(f"[ERROR] Failed on {img_path}: {e}")
