@@ -174,3 +174,26 @@
   box-shadow: none !important;
 }
 
+.uncheckoffBtn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 0.625rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  margin-top: auto;
+}
+
+.uncheckoffBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+  background: #d32f2f;
+}
+
+.uncheckoffBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

@@ -4,7 +4,7 @@ import { getUserIdFromRequest } from '@/lib/auth';
 
 export async function GET(
   request: Request,
-  { params }: { params: { userId: string } }
+  { params }: { params: { name: string } }
 ) {
   try {
     const authUserId = getUserIdFromRequest(request);
@@ -15,10 +15,12 @@ export async function GET(
       );
     }
 
-    const userId = parseInt(params.userId);
-    if (isNaN(userId)) {
+    // Decode the name from URL
+    const userName = decodeURIComponent(params.name);
+
+    if (!userName || userName.trim() === '') {
       return NextResponse.json(
-        { error: 'Invalid user ID' },
+        { error: 'Invalid user name' },
         { status: 400 }
       );
     }
@@ -27,8 +29,8 @@ export async function GET(
     const user = db.prepare(`
       SELECT id, name, email, team, major, dob, graduating_class, profile_pic_path
       FROM users
-      WHERE id = ?
-    `).get(userId) as any;
+      WHERE name = ?
+    `).get(userName) as any;
 
     if (!user) {
       return NextResponse.json(
@@ -43,7 +45,7 @@ export async function GET(
       FROM attendance
       WHERE user_id = ?
       ORDER BY date DESC
-    `).all(userId);
+    `).all(user.id);
 
     return NextResponse.json({
       user,

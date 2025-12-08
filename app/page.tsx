@@ -25,7 +25,8 @@ export default function Home() {
   const [presentUsers, setPresentUsers] = useState<PresentUser[]>([]);
   const [date, setDate] = useState('');
   const [loading, setLoading] = useState(true);
-  const [checkingOff, setCheckingOff] = useState<number | null>(null);
+  const [checkingOff, setCheckingOff] = useState<string | null>(null);
+  const [uncheckingOff, setUncheckingOff] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -64,11 +65,12 @@ export default function Home() {
     }
   };
 
-  const handleCheckoff = async (userId: number) => {
-    setCheckingOff(userId);
+  const handleCheckoff = async (userName: string) => {
+    setCheckingOff(userName);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/checkoff/${userId}`, {
+      const encodedName = encodeURIComponent(userName);
+      const response = await fetch(`/api/checkoff/${encodedName}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -88,6 +90,31 @@ export default function Home() {
     }
   };
 
+  const handleUncheckoff = async (userName: string) => {
+    setUncheckingOff(userName);
+    try {
+      const token = localStorage.getItem('token');
+      const encodedName = encodeURIComponent(userName);
+      const response = await fetch(`/api/checkoff/${encodedName}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        await fetchData();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to uncheck off user');
+      }
+    } catch (error) {
+      alert('An error occurred');
+    } finally {
+      setUncheckingOff(null);
+    }
+  };
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -95,12 +122,12 @@ export default function Home() {
     });
   };
 
-  const isPresent = (userId: number) => {
-    return presentUsers.some(u => u.id === userId);
+  const isPresent = (userName: string) => {
+    return presentUsers.some(u => u.name === userName);
   };
 
-  const getPresentUser = (userId: number) => {
-    return presentUsers.find(u => u.id === userId);
+  const getPresentUser = (userName: string) => {
+    return presentUsers.find(u => u.name === userName);
   };
 
   return (
@@ -121,12 +148,13 @@ export default function Home() {
         ) : (
           <div className={styles.grid}>
             {allUsers.map((user) => {
-              const present = isPresent(user.id);
-              const presentUser = getPresentUser(user.id);
+              const present = isPresent(user.name);
+              const presentUser = getPresentUser(user.name);
+              const encodedName = encodeURIComponent(user.name);
               
               return (
                 <div key={user.id} className={`${styles.card} ${present ? styles.presentCard : ''}`}>
-                  <Link href={`/user/${user.id}`} className={styles.cardLink}>
+                  <Link href={`/user/${encodedName}`} className={styles.cardLink}>
                     <div className={styles.avatar}>
                       {user.profile_pic_path ? (
                         <Image
@@ -155,13 +183,23 @@ export default function Home() {
                       </p>
                     )}
                   </Link>
-                  <button
-                    onClick={() => handleCheckoff(user.id)}
-                    disabled={checkingOff === user.id || present}
-                    className={`${styles.checkoffBtn} ${present ? styles.checkedOffBtn : ''}`}
-                  >
-                    {checkingOff === user.id ? 'Checking...' : present ? 'Already Checked Off' : 'Check Off'}
-                  </button>
+                  {present ? (
+                    <button
+                      onClick={() => handleUncheckoff(user.name)}
+                      disabled={uncheckingOff === user.name}
+                      className={styles.uncheckoffBtn}
+                    >
+                      {uncheckingOff === user.name ? 'Unchecking...' : 'Uncheck Off'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleCheckoff(user.name)}
+                      disabled={checkingOff === user.name}
+                      className={styles.checkoffBtn}
+                    >
+                      {checkingOff === user.name ? 'Checking...' : 'Check Off'}
+                    </button>
+                  )}
                 </div>
               );
             })}
