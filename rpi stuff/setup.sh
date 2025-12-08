@@ -106,9 +106,7 @@ install_system_pkg "cmake" || exit 1
 install_system_pkg "pkg-config" || exit 1
 install_system_pkg "git" || exit 1
 
-# BLAS/LAPACK for dlib
-install_system_pkg "libopenblas-dev" || exit 1
-install_system_pkg "liblapack-dev" || exit 1
+# Note: BLAS/LAPACK no longer needed (dlib removed)
 
 # OpenCV dependencies
 install_system_pkg "libjpeg-dev" || exit 1
@@ -170,7 +168,7 @@ echo ""
 
 echo "Step 5: Installing Python packages..."
 echo "----------------------------------------"
-echo -e "${YELLOW}Note:${NC} This may take 30-60 minutes, especially for dlib compilation"
+echo -e "${YELLOW}Note:${NC} This should be much faster now (no dlib compilation needed!)"
 echo ""
 
 # Check if requirements.txt exists
@@ -179,64 +177,13 @@ if [ ! -f "requirements.txt" ]; then
     exit 1
 fi
 
-# Install packages one by one for better error handling
-echo "Installing core dependencies..."
-pip install --quiet numpy requests || {
-    echo -e "${RED}✗${NC} Failed to install numpy/requests"
+# Install packages from requirements.txt
+echo "Installing all packages from requirements.txt..."
+pip install -r requirements.txt || {
+    echo -e "${RED}✗${NC} Failed to install Python packages"
     exit 1
 }
-echo -e "${GREEN}✓${NC} numpy, requests installed"
-
-echo "Installing OpenCV..."
-pip install --quiet opencv-python || {
-    echo -e "${RED}✗${NC} Failed to install opencv-python"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} opencv-python installed"
-
-echo "Installing Hugging Face Hub..."
-pip install --quiet huggingface_hub || {
-    echo -e "${RED}✗${NC} Failed to install huggingface_hub"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} huggingface_hub installed"
-
-echo "Installing Ultralytics (this may take a few minutes)..."
-pip install --quiet ultralytics || {
-    echo -e "${RED}✗${NC} Failed to install ultralytics"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} ultralytics installed"
-
-echo "Installing supervision..."
-pip install --quiet supervision || {
-    echo -e "${RED}✗${NC} Failed to install supervision"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} supervision installed"
-
-echo "Installing cmake (Python package)..."
-pip install --quiet cmake || {
-    echo -e "${RED}✗${NC} Failed to install cmake"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} cmake installed"
-
-echo "Installing dlib (THIS WILL TAKE 30-60 MINUTES - compiling from source)..."
-echo -e "${YELLOW}→${NC} Please be patient, dlib compilation is CPU-intensive..."
-pip install --no-cache-dir dlib || {
-    echo -e "${RED}✗${NC} Failed to install dlib"
-    echo -e "${YELLOW}Tip:${NC} Make sure all system dependencies are installed"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} dlib installed successfully"
-
-echo "Installing face_recognition..."
-pip install --quiet face_recognition || {
-    echo -e "${RED}✗${NC} Failed to install face_recognition"
-    exit 1
-}
-echo -e "${GREEN}✓${NC} face_recognition installed"
+echo -e "${GREEN}✓${NC} All Python packages installed"
 
 echo ""
 echo "=========================================="
@@ -244,18 +191,17 @@ echo -e "${GREEN}Setup Complete!${NC}"
 echo "=========================================="
 echo ""
 echo "Next steps:"
-echo "1. Activate the virtual environment:"
+echo "1. Make sure the GPU server is running at 76.175.119.31:3005"
+echo "2. Activate the virtual environment:"
 echo "   source venv/bin/activate"
-echo ""
-echo "2. Build face encodings (if not already done):"
-echo "   cd encodings"
-echo "   python run_build_encodings.py"
-echo "   cd .."
 echo ""
 echo "3. Run the real-time recognition:"
 echo "   cd encodings"
 echo "   python run_realtime_recognition.py"
 echo ""
-echo "Note: Make sure your webcam is connected and accessible"
+echo "Note:"
+echo "  - Make sure your webcam is connected and accessible"
+echo "  - Face recognition is now handled by the GPU server"
+echo "  - Dataset and encodings have been moved to GPU server"
 echo ""
 

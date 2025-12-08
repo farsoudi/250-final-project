@@ -1,10 +1,18 @@
+#!/usr/bin/env python3
+"""
+Build face encodings from dataset for GPU server
+This should be run on the GPU server with the dataset
+"""
+
 import os
 import glob
 import numpy as np
 import face_recognition
 
-DATASET_DIR = "dataset"
+# Paths - adjust these as needed
+DATASET_DIR = "dataset"  # Dataset is now in gpu stuff directory
 OUTPUT_PATH = "encodings/face_encodings.npz"
+
 os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
 
 def build_encodings():
@@ -12,6 +20,11 @@ def build_encodings():
     all_names = []
 
     # Each folder = one person
+    if not os.path.exists(DATASET_DIR):
+        print(f"[ERROR] Dataset directory not found: {DATASET_DIR}")
+        print("[INFO] Please ensure the dataset directory exists or update DATASET_DIR in this script")
+        return
+
     for person_name in os.listdir(DATASET_DIR):
         person_dir = os.path.join(DATASET_DIR, person_name)
         if not os.path.isdir(person_dir):
@@ -47,3 +60,4 @@ def build_encodings():
 
 if __name__ == "__main__":
     build_encodings()
+
