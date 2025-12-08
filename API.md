@@ -143,8 +143,10 @@ Create a new user account.
   "message": "User created successfully",
   "userId": 3
 }**Error Responses:**
-- `400 Bad Request` - Missing required fields or email already exists
+- `400 Bad Request` - Missing required fields, name already exists, or email already exists
 - `401 Unauthorized` - Invalid or missing token
+
+**Note:** User names must be unique. If a name already exists, the request will fail with a 400 error.
 
 **Example (without profile picture):**
 curl -X POST https://gpu.tailab42b6.ts.net/api/users \
@@ -167,15 +169,15 @@ curl -X POST https://gpu.tailab42b6.ts.net/api/users \
   -F "graduating_class=2025" \
   -F "profile_pic=@/path/to/image.jpg"---
 
-#### Get User by ID
+#### Get User by Name
 Get detailed information about a specific user, including their attendance record.
 
-**Endpoint:** `GET /api/users/{userId}`
+**Endpoint:** `GET /api/users/{name}`
 
 **Authentication:** Required
 
 **Path Parameters:**
-- `userId` (integer, required) - The ID of the user
+- `name` (string, required) - The name of the user (URL encoded)
 
 **Response (200 OK):**
 {
@@ -200,39 +202,77 @@ Get detailed information about a specific user, including their attendance recor
     }
   ]
 }**Error Responses:**
-- `400 Bad Request` - Invalid user ID
+- `400 Bad Request` - Invalid user name
 - `401 Unauthorized` - Invalid or missing token
 - `404 Not Found` - User not found
 
 **Example:**
-curl -X GET https://gpu.tailab42b6.ts.net/api/users/1 \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"---
+curl -X GET "https://gpu.tailab42b6.ts.net/api/users/John%20Doe" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+**Note:** The name must be URL encoded. For example, "John Doe" becomes "John%20Doe".---
 
 ### Attendance
 
 #### Check Off User
 Mark a user as present for today. Each user can only be checked off once per day.
 
-**Endpoint:** `POST /api/checkoff/{userId}`
+**Endpoint:** `POST /api/checkoff/{name}`
 
 **Authentication:** Required
 
 **Path Parameters:**
-- `userId` (integer, required) - The ID of the user to check off
+- `name` (string, required) - The name of the user to check off (URL encoded)
 
-**Response (200 OK):**son
+**Response (200 OK):**
 {
   "message": "User checked off successfully",
-  "userId": 1,
+  "name": "John Doe",
   "date": "2024-01-15"
-}**Error Responses:**
-- `400 Bad Request` - Invalid user ID or user already checked off today
+}
+
+**Error Responses:**
+- `400 Bad Request` - Invalid user name or user already checked off today
 - `401 Unauthorized` - Invalid or missing token
 - `404 Not Found` - User not found
 
 **Example:**
-curl -X POST https://gpu.tailab42b6.ts.net/api/checkoff/1 \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"---
+curl -X POST "https://gpu.tailab42b6.ts.net/api/checkoff/John%20Doe" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+**Note:** The name must be URL encoded. For example, "John Doe" becomes "John%20Doe".
+
+---
+
+#### Uncheck Off User
+Remove a user's attendance record for today. This allows reverting a checkoff if it was done by mistake.
+
+**Endpoint:** `DELETE /api/checkoff/{name}`
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `name` (string, required) - The name of the user to uncheck off (URL encoded)
+
+**Response (200 OK):**
+{
+  "message": "User uncheckoff successfully",
+  "name": "John Doe",
+  "date": "2024-01-15"
+}
+
+**Error Responses:**
+- `400 Bad Request` - Invalid user name or user is not checked off today
+- `401 Unauthorized` - Invalid or missing token
+- `404 Not Found` - User not found
+
+**Example:**
+curl -X DELETE "https://gpu.tailab42b6.ts.net/api/checkoff/John%20Doe" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+**Note:** The name must be URL encoded. For example, "John Doe" becomes "John%20Doe".
+
+---
 
 #### Get Today's Attendance
 Get a list of all users who have been checked off today.

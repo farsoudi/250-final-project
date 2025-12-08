@@ -61,9 +61,18 @@ export async function POST(request: Request) {
 
     const db = getDatabase();
 
+    // Check if name already exists
+    const existingName = db.prepare('SELECT id FROM users WHERE name = ?').get(name) as any;
+    if (existingName) {
+      return NextResponse.json(
+        { error: 'Name already exists' },
+        { status: 400 }
+      );
+    }
+
     // Check if email already exists
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
-    if (existing) {
+    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ?').get(email) as any;
+    if (existingEmail) {
       return NextResponse.json(
         { error: 'Email already exists' },
         { status: 400 }

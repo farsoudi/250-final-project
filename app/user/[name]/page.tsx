@@ -24,19 +24,20 @@ interface AttendanceRecord {
 
 export default function UserPage() {
   const params = useParams();
-  const userId = params.userId as string;
+  const userName = params.name as string;
   const [user, setUser] = useState<User | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserData();
-  }, [userId]);
+  }, [userName]);
 
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/users/${userId}`, {
+      const encodedName = encodeURIComponent(userName);
+      const response = await fetch(`/api/users/${encodedName}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
