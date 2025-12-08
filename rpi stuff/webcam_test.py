@@ -8,16 +8,12 @@ if not cap.isOpened():
 
 print("✔ Webcam opened successfully")
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        print("❌ Failed to grab frame")
-        break
-
-    cv2.imshow("Webcam Test - Press Q to quit", frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+ret, frame = cap.read()
+if not ret:
+    print("❌ Failed to grab frame")
+else:
+    print("Frame shape:", frame.shape)
+    cv2.imwrite("webcam_test.jpg", frame)
+    print("Saved frame to webcam_test.jpg")
 
 cap.release()
-cv2.destroyAllWindows()
