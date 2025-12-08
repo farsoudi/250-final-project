@@ -9,31 +9,24 @@ import requests
 import time
 
 API_BASE_URL = "https://gpu.tailab42b6.ts.net"  
-LOGIN_EMAIL = "jsng@usc.edu"            
-LOGIN_PASSWORD = "password"  
-
-NAME_TO_PERSON_ID = {
-    "alice": "123",
-    "bob": "456",
-}
+LOGIN_EMAIL = "admin@scope.com"            
+LOGIN_PASSWORD = "admin123"  
 
 CHECKOFF_COOLDOWN_SECONDS = 10
 _last_checkoff_time = {}
 
 _API_TOKEN = None
 
+
 def authenticate():
     """
     Log in to the API and cache the JWT token.
-    Uses POST /api/auth/login with JSON body {email, password}.
+    POST /api/auth/login -> { token: "..." }
     """
     global _API_TOKEN
 
     url = f"{API_BASE_URL}/api/auth/login"
-    payload = {
-        "email": LOGIN_EMAIL,
-        "password": LOGIN_PASSWORD,
-    }
+    payload = {"email": LOGIN_EMAIL, "password": LOGIN_PASSWORD}
 
     try:
         resp = requests.post(url, json=payload, timeout=5)
@@ -45,73 +38,67 @@ def authenticate():
         data = resp.json()
         token = data.get("token")
         if not token:
-            print("[AUTH ERROR] No 'token' field in response:", data)
+            print("[AUTH ERROR] Login succeeded but no token found:", data)
             _API_TOKEN = None
             return None
 
         _API_TOKEN = token
-        print("[AUTH] Logged in successfully, token cached.")
+        print("[AUTH] Logged in successfully.")
         return _API_TOKEN
 
     except Exception as e:
-        print(f"[AUTH EXCEPTION] Failed to login: {e}")
+        print(f"[AUTH EXCEPTION] {e}")
         _API_TOKEN = None
         return None
 
 
 def get_token():
-    """
-    Helper to ensure we have a token.
-    Logs in if we don't have one yet.
-    """
+    """Return cached token or authenticate if missing."""
     global _API_TOKEN
-    if _API_TOKEN is not None:
+    if _API_TOKEN:
         return _API_TOKEN
     return authenticate()
 
-def send_checkoff(name):
+def send_checkoff(name: str):
     """
-    POST /api/checkoff/{userId} for a recognized name, with JWT auth.
-    Respects cooldown per user to avoid spamming the API.
-    Automatically retries login once if we get a 401.
+    POST /api/checkoff/{name} with JWT auth.
+    Applies cooldown per name to prevent API spam.
+    Automatically refreshes JWT token if expired (401).
     """
-    person_id = NAME_TO_PERSON_ID.get(name)
-    if person_id is None:
-        # No mapping for this name -> nothing to do
+    if not name or name == "Unknown":
         return
 
     now = time.time()
-    last_time = _last_checkoff_time.get(person_id, 0)
+    last_time = _last_checkoff_time.get(name, 0)
+
     if now - last_time < CHECKOFF_COOLDOWN_SECONDS:
-        # Too soon; skip to avoid spam
-        return
+        return  # cooldown active
 
     token = get_token()
     if not token:
         print("[API] No token available; cannot send checkoff.")
         return
 
-    url = f"{API_BASE_URL}/api/checkoff/{person_id}"
+    url = f"{API_BASE_URL}/api/checkoff/{name}"
+
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer {token}"
     }
 
     try:
         resp = requests.post(url, headers=headers, timeout=5)
-        # If token expired / invalid, retry once with fresh login
+
+        # Retry once if token is expired
         if resp.status_code == 401:
-            print("[API] 401 Unauthorized, refreshing token and retrying once...")
+            print("[API] Token expired, refreshing...")
             authenticate()
-            token = _API_TOKEN
-            if not token:
-                print("[API] Re-auth failed; giving up on this checkoff.")
-                return
-            headers["Authorization"] = f"Bearer {token}"
-            resp = requests.post(url, headers=headers, timeout=5)
+            if _API_TOKEN:
+                headers["Authorization"] = f"Bearer {_API_TOKEN}"
+                resp = requests.post(url, headers=headers, timeout=5)
 
         if resp.status_code == 200:
-            print(f"[API] Checkoff OK for userId={person_id}: {resp.json()}")
-            _last_checkoff_time[person_id] = now
+            print(f"[API] Checkoff OK for {name}: {resp.json()}")
+            _last_checkoff_time[name] = now
         else:
             print(f"[API] Checkoff failed ({resp.status_code}): {resp.text}")
 
