@@ -11,7 +11,7 @@ import time
 import sys
 from threading import Thread, Event
 from queue import Queue
-import numpy as np
+from datetime import datetime
 
 # Configuration
 GPU_SERVER_URL = "http://76.175.119.31:3005"  # Update with your GPU server IP
@@ -20,6 +20,7 @@ HEALTH_CHECK_ENDPOINT = f"{GPU_SERVER_URL}/health"
 FRAME_CAPTURE_INTERVAL = 0.5  # Capture a frame every 0.5 seconds
 RECOGNITION_TIMEOUT = 10  # Timeout for recognition requests
 MAX_RETRIES = 3
+ATTENDANCE_LOG_FILE = "attendance.log"  # File to log attendance
 
 # Load face cascade classifier for local face detection
 FACE_CASCADE = cv2.CascadeClassifier(
@@ -101,6 +102,37 @@ def detect_faces(frame):
         minSize=(20, 20)
     )
     return faces
+
+
+def log_attendance(name, distance, confidence):
+    """
+    Log face recognition to file and console.
+    
+    Args:
+        name: Recognized person's name
+        distance: Distance metric from GPU server
+        confidence: Confidence percentage
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Console output
+    if name != 'Unknown':
+        print(f"✔ [{timestamp}] Recognized: {name} | Confidence: {confidence:.2%} | Distance: {distance:.4f}")
+    else:
+        print(f"⚠ [{timestamp}] Unknown person | Distance: {distance:.4f}")
+    
+    # Log to file
+    try:
+        with open(ATTENDANCE_LOG_FILE, 'a') as f:
+            log_entry = {
+                "timestamp": timestamp,
+                "name": name,
+                "distance": distance,
+                "confidence": confidence
+            }
+            f.write(json.dumps(log_entry) + "\n")
+    except Exception as e:
+        print(f"❌ Failed to write to log file: {e}")
 
 
 class GPUServerClient:
@@ -222,13 +254,7 @@ def main():
                 distance = result.get('distance')
                 confidence = result.get('confidence')
                 
-                if name != 'Unknown':
-                    print(f"✔ Recognized: {name} (confidence: {confidence:.2%}, distance: {distance:.4f})")
-                else:
-                    if distance is not None:
-                        print(f"⚠ Unknown person (distance: {distance:.4f})")
-                    else:
-                        print("⚠ No face detected in frame")
+                log_attendance(name, distance, confidence)
             
             time.sleep(FRAME_CAPTURE_INTERVAL)
     
