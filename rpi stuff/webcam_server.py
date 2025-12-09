@@ -12,6 +12,7 @@ import sys
 from threading import Thread, Event
 from queue import Queue
 from datetime import datetime
+from urllib.parse import quote
 
 # Configuration
 GPU_SERVER_URL = "http://76.175.119.31:3005"  # Update with your GPU server IP
@@ -159,6 +160,7 @@ def authenticate():
     payload = {"email": LOGIN_EMAIL, "password": LOGIN_PASSWORD}
 
     try:
+        # Suppress SSL warnings if using self-signed cert
         resp = requests.post(url, json=payload, timeout=5, verify=False)
         if resp.status_code != 200:
             print(f"[AUTH ERROR] {resp.status_code}: {resp.text}")
@@ -176,6 +178,10 @@ def authenticate():
         print("[AUTH] Logged in successfully.")
         return _API_TOKEN
 
+    except requests.exceptions.ConnectionError as e:
+        print(f"[AUTH ERROR] Cannot connect to API server at {API_BASE_URL}: {e}")
+        _API_TOKEN = None
+        return None
     except Exception as e:
         print(f"[AUTH EXCEPTION] {e}")
         _API_TOKEN = None
@@ -195,6 +201,7 @@ def send_checkoff(name: str):
     POST /api/checkoff/{name} with JWT auth.
     Applies cooldown per name to prevent API spam.
     Automatically refreshes JWT token if expired (401).
+    Name must be URL encoded.
     """
     if not name or name == "Unknown":
         return
@@ -210,7 +217,9 @@ def send_checkoff(name: str):
         print("[API] No token available; cannot send checkoff.")
         return
 
-    url = f"{API_BASE_URL}/api/checkoff/{name}"
+    # URL encode the name as per API.md
+    encoded_name = quote(name)
+    url = f"{API_BASE_URL}/api/checkoff/{encoded_name}"
 
     headers = {
         "Authorization": f"Bearer {token}"
@@ -234,6 +243,8 @@ def send_checkoff(name: str):
         else:
             print(f"[API] Checkoff failed ({resp.status_code}): {resp.text}")
 
+    except requests.exceptions.ConnectionError as e:
+        print(f"[API] Cannot connect to API server at {API_BASE_URL}: {e}")
     except Exception as e:
         print(f"[API EXCEPTION] Failed to POST {url}: {e}")
 
