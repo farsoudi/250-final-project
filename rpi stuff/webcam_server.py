@@ -15,7 +15,7 @@ from datetime import datetime
 from urllib.parse import quote
 
 # Configuration
-GPU_SERVER_URL = "http://76.175.119.31:3005"  # Update with your GPU server IP
+GPU_SERVER_URL = "http://76.175.119.31:3005"  
 RECOGNITION_ENDPOINT = f"{GPU_SERVER_URL}/recognize"
 HEALTH_CHECK_ENDPOINT = f"{GPU_SERVER_URL}/health"
 
@@ -386,3 +386,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# this code was written with the assistance of LLMs like ChatGPT
