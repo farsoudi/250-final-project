@@ -1,5 +1,6 @@
 flask
 opencv-python
+dlib
 face_recognition
 numpy
 werkzeug

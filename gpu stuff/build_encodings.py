@@ -15,22 +15,30 @@ def check_gpu_support():
     """Check if dlib was compiled with CUDA support."""
     try:
         import dlib
-        # Try to get dlib version info
-        dlib_version = dlib.DLIB_VERSION
-        print(f"[INFO] dlib version: {dlib_version}")
-        
-        # Check if CUDA is available (dlib will use it automatically for CNN if compiled with CUDA)
+        # Try to get dlib version info (newer versions don't have DLIB_VERSION)
         try:
-            # This is a simple check - dlib doesn't expose CUDA directly in Python
-            # But CNN model will use GPU automatically if dlib was compiled with CUDA
-            print("[INFO] GPU support: CNN model will use GPU automatically if dlib was compiled with CUDA")
-            print("[INFO] Note: HOG model is always CPU-only")
-            return True
-        except:
-            print("[INFO] GPU support: Unknown (CNN will try to use GPU if available)")
-            return False
+            dlib_version = dlib.DLIB_VERSION
+            print(f"[INFO] dlib version: {dlib_version}")
+        except AttributeError:
+            print("[INFO] dlib is installed (version info not available in this build)")
+        
+        # Check for CUDA/GPU availability
+        try:
+            import subprocess
+            result = subprocess.run(['nvidia-smi'], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0:
+                print("[INFO] ✓ NVIDIA GPU detected (RTX 3090 available)")
+                print("[INFO] Note: CNN model will use GPU if dlib was compiled with CUDA support")
+                print("[INFO] If CNN is slow, dlib may be CPU-only (pip install is usually CPU-only)")
+            else:
+                print("[INFO] GPU: nvidia-smi not available")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            print("[INFO] GPU: nvidia-smi not found (GPU may not be available)")
+        
+        print("[INFO] Note: HOG model is always CPU-only")
+        return True
     except ImportError:
-        print("[WARN] Could not import dlib directly")
+        print("[WARN] Could not import dlib")
         return False
 
 # Paths - adjust these as needed
