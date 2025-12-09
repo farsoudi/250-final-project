@@ -109,7 +109,7 @@ install_system_pkg "git" || exit 1
 # Note: BLAS/LAPACK no longer needed (dlib removed)
 
 # OpenCV dependencies
-install_system_pkg "libjpeg-dev" || exit 1
+install_system_pkg "libjpeg-dev"
 install_system_pkg "libtiff5-dev" || exit 1
 install_system_pkg "libjasper-dev" || exit 1
 install_system_pkg "libpng-dev" || exit 1
