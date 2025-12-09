@@ -11,6 +11,7 @@ import time
 import sys
 from threading import Thread, Event
 from queue import Queue
+import numpy as np
 
 # Configuration
 GPU_SERVER_URL = "http://76.175.119.31:3005"  # Update with your GPU server IP
@@ -19,6 +20,11 @@ HEALTH_CHECK_ENDPOINT = f"{GPU_SERVER_URL}/health"
 FRAME_CAPTURE_INTERVAL = 0.5  # Capture a frame every 0.5 seconds
 RECOGNITION_TIMEOUT = 10  # Timeout for recognition requests
 MAX_RETRIES = 3
+
+# Load face cascade classifier for local face detection
+FACE_CASCADE = cv2.CascadeClassifier(
+    cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+)
 
 
 class WebcamFrameCapture:
@@ -74,6 +80,26 @@ class WebcamFrameCapture:
         if self.cap:
             self.cap.release()
         print("✔ Webcam closed")
+
+
+def detect_faces(frame):
+    """
+    Detect faces in a frame using Haar Cascade.
+    
+    Args:
+        frame: numpy array (BGR format from OpenCV)
+    
+    Returns:
+        list: List of (x, y, w, h) tuples for detected faces
+    """
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = FACE_CASCADE.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,
+        minSize=(30, 30)
+    )
+    return faces
 
 
 class GPUServerClient:
@@ -177,6 +203,16 @@ def main():
             if frame is None:
                 time.sleep(0.1)
                 continue
+            
+            # Detect faces locally first
+            faces = detect_faces(frame)
+            
+            # Only send to GPU if faces detected
+            if len(faces) == 0:
+                time.sleep(FRAME_CAPTURE_INTERVAL)
+                continue
+            
+            print(f"[INFO] Face detected ({len(faces)} face(s)), sending to GPU server...")
             
             # Send frame for recognition
             result = gpu_client.send_frame_for_recognition(frame)
