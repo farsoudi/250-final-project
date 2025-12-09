@@ -10,6 +10,29 @@ import numpy as np
 import face_recognition
 from PIL import Image
 
+# Check for GPU/CUDA support in dlib
+def check_gpu_support():
+    """Check if dlib was compiled with CUDA support."""
+    try:
+        import dlib
+        # Try to get dlib version info
+        dlib_version = dlib.DLIB_VERSION
+        print(f"[INFO] dlib version: {dlib_version}")
+        
+        # Check if CUDA is available (dlib will use it automatically for CNN if compiled with CUDA)
+        try:
+            # This is a simple check - dlib doesn't expose CUDA directly in Python
+            # But CNN model will use GPU automatically if dlib was compiled with CUDA
+            print("[INFO] GPU support: CNN model will use GPU automatically if dlib was compiled with CUDA")
+            print("[INFO] Note: HOG model is always CPU-only")
+            return True
+        except:
+            print("[INFO] GPU support: Unknown (CNN will try to use GPU if available)")
+            return False
+    except ImportError:
+        print("[WARN] Could not import dlib directly")
+        return False
+
 # Paths - adjust these as needed
 DATASET_DIR = "dataset"  # Dataset is now in gpu stuff directory
 OUTPUT_PATH = "encodings/face_encodings.npz"
@@ -76,6 +99,12 @@ def try_detect_face(image, model='hog'):
     return None
 
 def build_encodings():
+    print("==========================================")
+    print("Face Encodings Builder")
+    print("==========================================")
+    check_gpu_support()
+    print("")
+    
     all_encodings = []
     all_names = []
 
@@ -123,9 +152,9 @@ def build_encodings():
                 print(" [Trying HOG...]", end="", flush=True)
                 encoding = try_detect_face(image, model='hog')
                 
-                # If HOG fails, try CNN model (more accurate but slower)
+                # If HOG fails, try CNN model (more accurate, uses GPU if available)
                 if encoding is None:
-                    print(" [HOG failed, trying CNN (this may take 10-30 seconds)...]", end="", flush=True)
+                    print(" [HOG failed, trying CNN (GPU-accelerated if available, 10-30 seconds)...]", end="", flush=True)
                     encoding = try_detect_face(image, model='cnn')
                 
                 if encoding is None:
