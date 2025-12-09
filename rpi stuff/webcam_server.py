@@ -93,11 +93,12 @@ def detect_faces(frame):
         list: List of (x, y, w, h) tuples for detected faces
     """
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # More lenient parameters for better detection on RPi
     faces = FACE_CASCADE.detectMultiScale(
         gray,
-        scaleFactor=1.1,
-        minNeighbors=5,
-        minSize=(30, 30)
+        scaleFactor=1.05,
+        minNeighbors=3,
+        minSize=(20, 20)
     )
     return faces
 
