@@ -101,6 +101,10 @@ def recognize():
     Expected: multipart/form-data with 'image' field
     OR JSON with 'image' field containing base64 encoded image
     """
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] POST /recognize - Processing recognition request...")
+    
     try:
         # Handle multipart form data (image file)
         if 'image' in request.files:
@@ -137,11 +141,19 @@ def recognize():
         # Perform recognition
         name, distance = recognize_face(face_image)
         
-        return jsonify({
+        # Log the recognition result
+        if distance is not None:
+            print(f"[RECOGNIZE] Name: {name}, Distance: {distance:.4f}, Threshold: {THRESHOLD}")
+        else:
+            print(f"[RECOGNIZE] Name: {name}, No face detected in image")
+        
+        response = {
             "name": name,
             "distance": distance,
             "confidence": 1.0 - min(distance / THRESHOLD, 1.0) if distance is not None else None
-        })
+        }
+        
+        return jsonify(response)
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
