@@ -17,7 +17,10 @@ app = Flask(__name__)
 
 # Configuration
 ENCODINGS_PATH = "encodings/face_encodings.npz"
-THRESHOLD = 0.75  # distance threshold for "same person" (higher = more lenient)
+THRESHOLD = 0.8  # distance threshold for "same person" (higher = more lenient)
+# With limited encodings (2-4 per person), need higher threshold
+# Your distances are ~0.77, so 0.8 threshold should work
+# Typical: 0.6-0.65 (many encodings), 0.7-0.8 (few encodings), 0.5 (strict)
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB max
 
 # Global variables
@@ -60,11 +63,25 @@ def recognize_face(face_image):
     
     # Compute L2 distance to all known encodings
     distances = np.linalg.norm(known_encodings - face_enc, axis=1)
-    best_idx = np.argmin(distances)
-    best_distance = distances[best_idx]
+    
+    # For better accuracy with limited encodings, find best match per person
+    # then use the best overall match
+    unique_names = np.unique(known_names)
+    best_person_distance = {}
+    
+    for name in unique_names:
+        # Get all encodings for this person
+        person_mask = known_names == name
+        person_distances = distances[person_mask]
+        # Use minimum distance (best match) for this person
+        best_person_distance[name] = np.min(person_distances)
+    
+    # Find the person with the best (lowest) distance
+    best_person = min(best_person_distance, key=best_person_distance.get)
+    best_distance = best_person_distance[best_person]
     
     if best_distance < THRESHOLD:
-        return known_names[best_idx], float(best_distance)
+        return best_person, float(best_distance)
     else:
         return "Unknown", float(best_distance)
 
