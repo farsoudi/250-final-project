@@ -17,15 +17,26 @@ from datetime import datetime
 GPU_SERVER_URL = "http://76.175.119.31:3005"  # Update with your GPU server IP
 RECOGNITION_ENDPOINT = f"{GPU_SERVER_URL}/recognize"
 HEALTH_CHECK_ENDPOINT = f"{GPU_SERVER_URL}/health"
+
+# API Configuration
+API_BASE_URL = "https://gpu.tailab42b6.ts.net"
+LOGIN_EMAIL = "admin@scope.com"
+LOGIN_PASSWORD = "admin123"
+CHECKOFF_COOLDOWN_SECONDS = 10
+
+# Frame capture configuration
 FRAME_CAPTURE_INTERVAL = 0.5  # Capture a frame every 0.5 seconds
 RECOGNITION_TIMEOUT = 10  # Timeout for recognition requests
-MAX_RETRIES = 3
 ATTENDANCE_LOG_FILE = "attendance.log"  # File to log attendance
 
 # Load face cascade classifier for local face detection
 FACE_CASCADE = cv2.CascadeClassifier(
     cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
 )
+
+# Global API token
+_API_TOKEN = None
+_last_checkoff_time = {}
 
 
 class WebcamFrameCapture:
@@ -135,6 +146,96 @@ def log_attendance(name, distance, confidence):
             f.write(json.dumps(log_entry) + "\n")
     except Exception as e:
         print(f"❌ Failed to write to log file: {e}")
+
+
+def authenticate():
+    """
+    Log in to the API and cache the JWT token.
+    POST /api/auth/login -> { token: "..." }
+    """
+    global _API_TOKEN
+
+    url = f"{API_BASE_URL}/api/auth/login"
+    payload = {"email": LOGIN_EMAIL, "password": LOGIN_PASSWORD}
+
+    try:
+        resp = requests.post(url, json=payload, timeout=5, verify=False)
+        if resp.status_code != 200:
+            print(f"[AUTH ERROR] {resp.status_code}: {resp.text}")
+            _API_TOKEN = None
+            return None
+
+        data = resp.json()
+        token = data.get("token")
+        if not token:
+            print("[AUTH ERROR] Login succeeded but no token found:", data)
+            _API_TOKEN = None
+            return None
+
+        _API_TOKEN = token
+        print("[AUTH] Logged in successfully.")
+        return _API_TOKEN
+
+    except Exception as e:
+        print(f"[AUTH EXCEPTION] {e}")
+        _API_TOKEN = None
+        return None
+
+
+def get_token():
+    """Return cached token or authenticate if missing."""
+    global _API_TOKEN
+    if _API_TOKEN:
+        return _API_TOKEN
+    return authenticate()
+
+
+def send_checkoff(name: str):
+    """
+    POST /api/checkoff/{name} with JWT auth.
+    Applies cooldown per name to prevent API spam.
+    Automatically refreshes JWT token if expired (401).
+    """
+    if not name or name == "Unknown":
+        return
+
+    now = time.time()
+    last_time = _last_checkoff_time.get(name, 0)
+
+    if now - last_time < CHECKOFF_COOLDOWN_SECONDS:
+        return  # cooldown active
+
+    token = get_token()
+    if not token:
+        print("[API] No token available; cannot send checkoff.")
+        return
+
+    url = f"{API_BASE_URL}/api/checkoff/{name}"
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, timeout=5, verify=False)
+
+        # Retry once if token is expired
+        if resp.status_code == 401:
+            print("[API] Token expired, refreshing...")
+            authenticate()
+            if _API_TOKEN:
+                headers["Authorization"] = f"Bearer {_API_TOKEN}"
+                resp = requests.post(url, headers=headers, timeout=5, verify=False)
+
+        if resp.status_code == 200:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"✔ [{timestamp}] API Checkoff called for {name}: {resp.json()}")
+            _last_checkoff_time[name] = now
+        else:
+            print(f"[API] Checkoff failed ({resp.status_code}): {resp.text}")
+
+    except Exception as e:
+        print(f"[API EXCEPTION] Failed to POST {url}: {e}")
 
 
 class GPUServerClient:
@@ -257,6 +358,10 @@ def main():
                 confidence = result.get('confidence')
                 
                 log_attendance(name, distance, confidence)
+                
+                # Send checkoff to API if recognized
+                if name != 'Unknown':
+                    send_checkoff(name)
             
             time.sleep(FRAME_CAPTURE_INTERVAL)
     
