@@ -117,9 +117,11 @@ def log_attendance(name, distance, confidence):
     
     # Console output
     if name != 'Unknown':
-        print(f"✔ [{timestamp}] Recognized: {name} | Confidence: {confidence:.2%} | Distance: {distance:.4f}")
+        distance_str = f"{distance:.4f}" if distance is not None else "N/A"
+        print(f"✔ [{timestamp}] Recognized: {name} | Confidence: {confidence:.2%} | Distance: {distance_str}")
     else:
-        print(f"⚠ [{timestamp}] Unknown person | Distance: {distance:.4f}")
+        distance_str = f"{distance:.4f}" if distance is not None else "N/A"
+        print(f"⚠ [{timestamp}] Unknown person | Distance: {distance_str}")
     
     # Log to file
     try:
