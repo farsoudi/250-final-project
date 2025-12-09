@@ -85,12 +85,14 @@ def build_encodings():
         print("[INFO] Please ensure the dataset directory exists or update DATASET_DIR in this script")
         return
 
-    for person_name in os.listdir(DATASET_DIR):
+    # Sort folder names for consistent ordering
+    person_folders = sorted([d for d in os.listdir(DATASET_DIR) 
+                            if os.path.isdir(os.path.join(DATASET_DIR, d))])
+    
+    for person_name in person_folders:
         person_dir = os.path.join(DATASET_DIR, person_name)
-        if not os.path.isdir(person_dir):
-            continue
-
-        image_paths = glob.glob(os.path.join(person_dir, "*.*"))
+        
+        image_paths = sorted(glob.glob(os.path.join(person_dir, "*.*")))
         print(f"[INFO] Processing {person_name} with {len(image_paths)} images")
 
         person_encodings_count = 0
@@ -134,7 +136,7 @@ def build_encodings():
                 all_encodings.append(encoding)
                 all_names.append(person_name)
                 person_encodings_count += 1
-                print(f" [SUCCESS]")
+                print(f" [SUCCESS - encoding for '{person_name}']")
                 
             except Exception as e:
                 print(f"[ERROR] Failed on {img_path}: {e}")
@@ -162,6 +164,11 @@ def build_encodings():
     unique_names, counts = np.unique(all_names, return_counts=True)
     for name, count in zip(unique_names, counts):
         print(f"  - {name}: {count} encodings")
+    
+    # Debug: Show first few name-encoding pairs
+    print(f"\n[DEBUG] First 5 encodings:")
+    for i in range(min(5, len(all_names))):
+        print(f"  Encoding {i}: {all_names[i]}")
 
 if __name__ == "__main__":
     build_encodings()
