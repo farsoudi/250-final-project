@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 # Configuration
 ENCODINGS_PATH = "encodings/face_encodings.npz"
-THRESHOLD = 0.5  # distance threshold for "same person"
+THRESHOLD = 0.75  # distance threshold for "same person" (higher = more lenient)
 MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5MB max
 
 # Global variables
