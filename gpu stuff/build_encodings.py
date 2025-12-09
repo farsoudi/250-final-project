@@ -156,14 +156,9 @@ def build_encodings():
                 except:
                     pass
                 
-                # Try HOG model first (faster)
-                print(" [Trying HOG...]", end="", flush=True)
-                encoding = try_detect_face(image, model='hog')
-                
-                # If HOG fails, try CNN model (more accurate, uses GPU if available)
-                if encoding is None:
-                    print(" [HOG failed, trying CNN (GPU-accelerated if available, 10-30 seconds)...]", end="", flush=True)
-                    encoding = try_detect_face(image, model='cnn')
+                # Use CNN model directly (skipping HOG - more accurate, uses GPU if available)
+                print(" [Using CNN (GPU-accelerated if available, 10-30 seconds)...]", end="", flush=True)
+                encoding = try_detect_face(image, model='cnn')
                 
                 if encoding is None:
                     print(f" [FAILED - No face found]")
